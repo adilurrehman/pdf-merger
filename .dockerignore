@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# Git
+.git/
+.gitignore
+
+# GitHub
+.github/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+LICENSE
+CHANGELOG.md
+
+# Tests
+coverage/
+.nyc_output/
+__tests__/
+*.test.js
+*.spec.js
+
+# Uploaded files (will be created fresh in container)
+uploads/*
+!uploads/.gitkeep

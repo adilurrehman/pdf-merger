@@ -1,0 +1,86 @@
+<%- include('partials/header') %>
+
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Hero Section -->
+            <div class="text-center mb-5">
+                <div class="contact-icon-wrapper mb-4">
+                    <i class="bi bi-envelope-paper-fill"></i>
+                </div>
+                <h1 class="display-5 fw-bold text-white">Contact Us</h1>
+                <p class="text-muted">Have questions or feedback? We'd love to hear from you!</p>
+            </div>
+            
+            <% if (success) { %>
+                <div class="alert alert-success d-flex align-items-center" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    <%= success %>
+                </div>
+            <% } %>
+            
+            <% if (error) { %>
+                <div class="alert alert-danger d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <%= error %>
+                </div>
+            <% } %>
+            
+            <div class="contact-card">
+                <form method="POST" action="/contact">
+                    <div class="mb-4">
+                        <label for="name" class="form-label text-light">
+                            <i class="bi bi-person-fill me-2"></i>Your Name
+                        </label>
+                        <input type="text" class="form-control form-control-lg bg-dark text-light border-secondary" 
+                               id="name" name="name" placeholder="Enter your name" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="email" class="form-label text-light">
+                            <i class="bi bi-envelope-fill me-2"></i>Email Address
+                        </label>
+                        <input type="email" class="form-control form-control-lg bg-dark text-light border-secondary" 
+                               id="email" name="email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="message" class="form-label text-light">
+                            <i class="bi bi-chat-left-text-fill me-2"></i>Your Message
+                        </label>
+                        <textarea class="form-control bg-dark text-light border-secondary" 
+                                  id="message" name="message" rows="5" placeholder="Write your message here..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-send-fill me-2"></i>Send Message
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Contact Info Cards -->
+            <div class="row mt-5 g-4">
+                <div class="col-md-4">
+                    <div class="contact-info-card text-center">
+                        <i class="bi bi-envelope-fill text-primary"></i>
+                        <h6>Email</h6>
+                        <a href="mailto:adilurrehmanofficial@gmail.com">adilurrehmanofficial@gmail.com</a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="contact-info-card text-center">
+                        <i class="bi bi-geo-alt-fill text-danger"></i>
+                        <h6>Location</h6>
+                        <p class="text-muted mb-0">Lahore, Pakistan</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="contact-info-card text-center">
+                        <i class="bi bi-clock-fill text-success"></i>
+                        <h6>Response Time</h6>
+                        <p class="text-muted mb-0">Within 24 hours</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,295 @@
+<%- include('partials/header') %>
+
+    <div class="my-5 container bg-dark text-light rounded p-4 bg-height-60">
+        <% if (typeof error !=='undefined' && error) { %>
+            <div class="alert alert-danger" role="alert">
+                <%= error %>
+            </div>
+            <% } %>
+
+                <form method="post" action="/merge" enctype="multipart/form-data" id="mergeForm">
+                    <input type="hidden" name="mergeMode" id="mergeMode" value="all">
+                    <div class="form-group">
+                        <label for="exampleFormControlFile1">
+                            <h1>PDF Merger</h1>
+                            <div class="dropdown">
+                                <button class="btn btn-secondary dropdown-toggle my-2" type="button" id="mergeOptionsBtn" data-bs-toggle="dropdown"
+                                    aria-expanded="false">
+                                    Merge All Pages
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-dark my-2">
+                                    <a class="dropdown-item" href="#" id="mergeAllOption">Merge All Pages</a>
+                                    <a class="dropdown-item" href="#" id="mergeSpecificOption">Merge Specific Pages</a>
+                                </div>
+                            </div>
+                            Select 2-10 PDF files to merge (max 5MB each)
+                        </label>
+                        
+                        <!-- Drag and Drop Zone -->
+                        <div id="dropZone" class="drop-zone my-3">
+                            <div class="drop-zone-content">
+                                <span class="drop-zone-icon">📄</span>
+                                <p class="mb-1">Drag & Drop PDF files here</p>
+                                <p class="text-muted small">or click to browse</p>
+                            </div>
+                        </div>
+                        <input type="file" name="pdfs" class="d-none" id="exampleFormControlFile1" multiple
+                            accept=".pdf">
+                        
+                        <small class="text-warning" id="fileWarning"></small>
+                        <div id="fileList" class="my-2 file-list-container"></div>
+                        <input type="submit" class="btn btn-primary" value="Submit" id="submitBtn">
+                    </div>
+                </form>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('exampleFormControlFile1');
+        const dropZone = document.getElementById('dropZone');
+        const warning = document.getElementById('fileWarning');
+        const fileList = document.getElementById('fileList');
+        const submitBtn = document.getElementById('submitBtn');
+        const form = document.getElementById('mergeForm');
+        const mergeModeInput = document.getElementById('mergeMode');
+        const mergeOptionsBtn = document.getElementById('mergeOptionsBtn');
+        const mergeAllOption = document.getElementById('mergeAllOption');
+        const mergeSpecificOption = document.getElementById('mergeSpecificOption');
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        const MAX_FILES = 10;
+        const MIN_FILES = 2;
+
+        // Store selected files in array (allows removal)
+        let selectedFiles = [];
+        let mergeMode = 'all'; // 'all' or 'specific'
+
+        // Dropdown options handlers
+        mergeAllOption.addEventListener('click', function(e) {
+            e.preventDefault();
+            mergeMode = 'all';
+            mergeModeInput.value = 'all';
+            mergeOptionsBtn.textContent = 'Merge All Pages';
+            updateUI();
+        });
+
+        mergeSpecificOption.addEventListener('click', function(e) {
+            e.preventDefault();
+            mergeMode = 'specific';
+            mergeModeInput.value = 'specific';
+            mergeOptionsBtn.textContent = 'Merge Specific Pages';
+            updateUI();
+        });
+
+        // Click on drop zone to open file browser
+        dropZone.addEventListener('click', () => fileInput.click());
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight drop zone when dragging over
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dropZone.classList.add('drop-zone-active');
+        }
+
+        function unhighlight() {
+            dropZone.classList.remove('drop-zone-active');
+        }
+
+        // Handle dropped files
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        // Handle files from both drag-drop and file input
+        function handleFiles(files) {
+            const newFiles = Array.from(files);
+            
+            // Filter only PDF files
+            const pdfFiles = newFiles.filter(file => file.type === 'application/pdf');
+            
+            if (pdfFiles.length !== newFiles.length) {
+                warning.textContent = 'Only PDF files are allowed!';
+                warning.classList.remove('text-success');
+                warning.classList.add('text-warning');
+            }
+
+            pdfFiles.forEach(newFile => {
+                const exists = selectedFiles.some(f => f.name === newFile.name && f.size === newFile.size);
+                if (!exists) {
+                    selectedFiles.push(newFile);
+                }
+            });
+
+            // Trim if exceeds max
+            if (selectedFiles.length > MAX_FILES) {
+                selectedFiles = selectedFiles.slice(0, MAX_FILES);
+            }
+
+            updateFileInput();
+            updateUI();
+        }
+
+        // Remove file from selection
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileInput();
+            updateUI();
+        }
+
+        // Update the actual file input with current selection
+        function updateFileInput() {
+            const dataTransfer = new DataTransfer();
+            selectedFiles.forEach(file => dataTransfer.items.add(file));
+            fileInput.files = dataTransfer.files;
+        }
+
+        // Update UI based on current selection
+        function updateUI() {
+            const fileCount = selectedFiles.length;
+            let hasError = false;
+            let errorMsg = '';
+
+            // Check file count
+            if (fileCount === 0) {
+                errorMsg = 'Please select at least 2 PDF files';
+                hasError = true;
+            } else if (fileCount === 1) {
+                errorMsg = 'Please select at least one more PDF file';
+                hasError = true;
+            } else if (fileCount > MAX_FILES) {
+                errorMsg = `Maximum ${MAX_FILES} files allowed! You selected ${fileCount}`;
+                hasError = true;
+            }
+
+            // Check file sizes
+            let oversizedFiles = [];
+            selectedFiles.forEach(file => {
+                if (file.size > MAX_FILE_SIZE) {
+                    oversizedFiles.push(file.name);
+                }
+            });
+
+            if (oversizedFiles.length > 0) {
+                errorMsg = `Files exceed 5MB limit: ${oversizedFiles.join(', ')}`;
+                hasError = true;
+            }
+
+            // Update UI
+            if (hasError) {
+                warning.textContent = errorMsg;
+                warning.classList.remove('text-success');
+                warning.classList.add('text-warning');
+                submitBtn.disabled = true;
+            } else {
+                warning.textContent = `✓ ${fileCount} files selected`;
+                warning.classList.remove('text-warning');
+                warning.classList.add('text-success');
+                submitBtn.disabled = false;
+            }
+
+            // Show file list with remove buttons
+            if (fileCount === 0) {
+                fileList.innerHTML = '';
+            } else {
+                let listHtml = '<ul class="list-group list-group-flush">';
+                selectedFiles.forEach((file, index) => {
+                    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                    
+                    if (mergeMode === 'all') {
+                        // Simple list without page inputs
+                        listHtml += `
+                            <li class="list-group-item bg-secondary text-light d-flex justify-content-between align-items-center">
+                                <span>${index + 1}. ${file.name} (${sizeMB} MB)</span>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="removeFile(${index})" title="Remove file">
+                                    &times;
+                                </button>
+                            </li>`;
+                    } else {
+                        // List with page range inputs
+                        listHtml += `
+                            <li class="list-group-item bg-secondary text-light">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span>${index + 1}. ${file.name} (${sizeMB} MB)</span>
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="removeFile(${index})" title="Remove file">
+                                        &times;
+                                    </button>
+                                </div>
+                                <div class="page-range-inputs">
+                                    <div class="form-row align-items-center">
+                                        <div class="col-auto">
+                                            <label class="small">Pages:</label>
+                                        </div>
+                                        <div class="col-auto">
+                                            <input type="text" class="form-control form-control-sm page-range-input" 
+                                                   name="pageRanges[${index}]" 
+                                                   placeholder="e.g., 1-3, 5, 7-10 or all" 
+                                                   value="all"
+                                                   style="width: 180px;">
+                                        </div>
+                                        <div class="col-auto">
+                                            <small class="text-muted">Use: 1-3, 5, 7-10 or "all"</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </li>`;
+                    }
+                });
+                listHtml += '</ul>';
+                fileList.innerHTML = listHtml;
+            }
+        }
+
+        fileInput.addEventListener('change', function () {
+            handleFiles(this.files);
+        });
+
+        form.addEventListener('submit', function (e) {
+            if (selectedFiles.length < MIN_FILES || selectedFiles.length > MAX_FILES) {
+                e.preventDefault();
+                alert(`Please select between ${MIN_FILES} and ${MAX_FILES} PDF files`);
+                return;
+            }
+            
+            for (let file of selectedFiles) {
+                if (file.size > MAX_FILE_SIZE) {
+                    e.preventDefault();
+                    alert(`File "${file.name}" exceeds 5MB limit`);
+                    return;
+                }
+            }
+
+            // Validate page ranges in specific mode
+            if (mergeMode === 'specific') {
+                const pageInputs = document.querySelectorAll('.page-range-input');
+                for (let input of pageInputs) {
+                    const value = input.value.trim();
+                    if (!value) {
+                        e.preventDefault();
+                        alert('Please specify page ranges for all files');
+                        return;
+                    }
+                }
+            }
+        });
+    </script>
+
+    <%- include('partials/footer') %>

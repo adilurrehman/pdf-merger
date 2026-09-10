@@ -1,0 +1,127 @@
+# ==================================================
+# PDF Merger - Deployment Pipeline
+# ==================================================
+# This workflow deploys the application when
+# changes are pushed to the main branch
+
+name: Deploy
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  NODE_VERSION: '20.x'
+
+jobs:
+  # ==================================================
+  # DEPLOY TO PRODUCTION
+  # ==================================================
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: 📦 Install Dependencies
+        run: npm ci --legacy-peer-deps || npm install
+      
+      # ==========================================
+      # OPTION 1: Deploy to Vercel
+      # ==========================================
+      - name: 🚀 Deploy to Vercel
+        if: env.VERCEL_TOKEN != ''
+        uses: amondnet/vercel-action@v25
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+        continue-on-error: true
+      
+      # ==========================================
+      # OPTION 2: Deploy to Railway
+      # ==========================================
+      - name: 🚂 Deploy to Railway
+        if: env.RAILWAY_TOKEN != ''
+        uses: bervProject/railway-deploy@main
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        with:
+          railway_token: ${{ secrets.RAILWAY_TOKEN }}
+          service: pdf-merger
+        continue-on-error: true
+      
+      # ==========================================
+      # OPTION 3: Deploy to Render
+      # ==========================================
+      - name: 🎨 Deploy to Render
+        if: env.RENDER_DEPLOY_HOOK != ''
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        run: curl -X POST "$RENDER_DEPLOY_HOOK"
+        continue-on-error: true
+      
+      # ==========================================
+      # OPTION 4: Deploy to VPS via SSH
+      # ==========================================
+      - name: 🖥️ Deploy to VPS
+        if: env.VPS_HOST != ''
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd /var/www/pdf-merger
+            git pull origin main
+            npm install --production
+            pm2 restart pdf-merger
+        continue-on-error: true
+      
+      # ==========================================
+      # OPTION 5: Deploy to Heroku
+      # ==========================================
+      - name: 🟣 Deploy to Heroku
+        if: env.HEROKU_API_KEY != ''
+        uses: akhileshns/heroku-deploy@v3.13.15
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
+          heroku_email: ${{ secrets.HEROKU_EMAIL }}
+        continue-on-error: true
+
+  # ==================================================
+  # POST-DEPLOYMENT NOTIFICATION
+  # ==================================================
+  notify:
+    name: Send Notification
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()
+    
+    steps:
+      - name: 📧 Send Success Notification
+        if: needs.deploy.result == 'success'
+        run: echo "✅ Deployment successful!"
+      
+      - name: 📧 Send Failure Notification  
+        if: needs.deploy.result == 'failure'
+        run: echo "❌ Deployment failed!"

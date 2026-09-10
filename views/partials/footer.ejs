@@ -1,0 +1,149 @@
+<footer class="site-footer">
+    <div class="footer-top">
+        <div class="container">
+            <div class="row g-4">
+                <!-- Brand Section -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="footer-brand">
+                        <a href="/" class="footer-logo">
+                            <i class="bi bi-file-earmark-pdf-fill"></i>
+                            <span>PDF Merger</span>
+                        </a>
+                        <p class="footer-desc">
+                            Your free, fast, and secure solution for merging PDF files online. 
+                            No registration required, no data stored.
+                        </p>
+                        <div class="footer-social">
+                            <a href="https://github.com/adilurrehman" target="_blank" title="GitHub">
+                                <i class="bi bi-github"></i>
+                            </a>
+                            <a href="https://linkedin.com/in/adilurrehmanofficial" target="_blank" title="LinkedIn">
+                                <i class="bi bi-linkedin"></i>
+                            </a>
+                            <a href="https://instagram.com/adilurrehmanofficial" target="_blank" title="Instagram">
+                                <i class="bi bi-instagram"></i>
+                            </a>
+                            <a href="mailto:adilurrehmanofficial@gmail.com" title="Email">
+                                <i class="bi bi-envelope-fill"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Links -->
+                <div class="col-lg-2 col-md-6">
+                    <div class="footer-links">
+                        <h5>Quick Links</h5>
+                        <ul>
+                            <li><a href="/"><i class="bi bi-chevron-right"></i> Home</a></li>
+                            <li><a href="/about"><i class="bi bi-chevron-right"></i> About</a></li>
+                            <li><a href="/contact"><i class="bi bi-chevron-right"></i> Contact</a></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Features -->
+                <div class="col-lg-3 col-md-6">
+                    <div class="footer-links">
+                        <h5>Features</h5>
+                        <ul>
+                            <li><a href="/"><i class="bi bi-check2-circle"></i> Merge PDFs</a></li>
+                            <li><a href="/"><i class="bi bi-check2-circle"></i> Page Selection</a></li>
+                            <li><a href="/"><i class="bi bi-check2-circle"></i> Drag & Drop</a></li>
+                            <li><a href="/"><i class="bi bi-check2-circle"></i> Reorder Files</a></li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Security Badge -->
+                <div class="col-lg-3 col-md-6">
+                    <div class="footer-security">
+                        <h5>Your Privacy Matters</h5>
+                        <div class="security-badges">
+                            <div class="security-badge">
+                                <i class="bi bi-shield-lock-fill"></i>
+                                <span>Secure & Encrypted</span>
+                            </div>
+                            <div class="security-badge">
+                                <i class="bi bi-trash3-fill"></i>
+                                <span>Auto File Deletion</span>
+                            </div>
+                            <div class="security-badge">
+                                <i class="bi bi-database-x"></i>
+                                <span>No Data Storage</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer Bottom -->
+    <div class="footer-bottom">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6 text-center text-md-start">
+                    <p class="mb-0">
+                        &copy; 2026 <strong>PDF Merger</strong>. All rights reserved.
+                    </p>
+                </div>
+                <div class="col-md-6 text-center text-md-end">
+                    <p class="mb-0">
+                        Made with <i class="bi bi-heart-fill text-danger heart-beat"></i> by 
+                        <a href="https://github.com/adilurrehman" target="_blank">Adil ur Rehman Kakar</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Bootstrap 5 JS Bundle -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Theme Toggle Script -->
+<script>
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const body = document.body;
+    
+    // Get saved theme or use system preference
+    function getDefaultTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) return savedTheme;
+        // Check system preference
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    
+    setTheme(getDefaultTheme());
+    
+    // Listen for system theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+        // Only auto-switch if user hasn't manually set a preference
+        if (!localStorage.getItem('theme')) {
+            setTheme(e.matches ? 'dark' : 'light');
+        }
+    });
+    
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = body.classList.contains('light-theme') ? 'light' : 'dark';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        setTheme(newTheme);
+        localStorage.setItem('theme', newTheme);
+    });
+    
+    function setTheme(theme) {
+        body.className = theme + '-theme';
+        if (theme === 'light') {
+            themeIcon.className = 'bi bi-moon-fill';
+            themeToggle.title = 'Switch to Dark Mode';
+        } else {
+            themeIcon.className = 'bi bi-sun-fill';
+            themeToggle.title = 'Switch to Light Mode';
+        }
+    }
+</script>
+</body>
+
+</html>
