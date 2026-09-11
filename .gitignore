@@ -5,6 +5,11 @@ node_modules/
 .env
 .env.local
 .env.production
+.dev.vars*
+!.dev.vars.example
+
+# Wrangler local state
+.wrangler/
 
 # Uploaded files
 uploads/

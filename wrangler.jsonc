@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pdf-merger",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-11",
+  "compatibility_flags": ["nodejs_compat"],
+  // CommonJS __dirname does not exist in the Worker bundle; /bundle is the Worker's virtual root
+  "define": {
+    "__dirname": "\"/bundle\""
+  },
+  // Precompile EJS views before every dev/deploy build
+  "build": {
+    "command": "node scripts/build-views.js",
+    "watch_dir": "views"
+  },
+  // Only CSS/images live in public/ (see public/.assetsignore); PDFs are never written anywhere
+  "assets": {
+    "directory": "./public"
+  },
+  "observability": {
+    "enabled": true
+  }
+  // EMAIL_USER and EMAIL_PASS are Worker secrets:
+  //   npx wrangler secret put EMAIL_USER
+  //   npx wrangler secret put EMAIL_PASS
+  // For local `wrangler dev`, put them in .dev.vars (see .dev.vars.example).
+}

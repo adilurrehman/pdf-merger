@@ -1,0 +1,3 @@
+# Never publish PDFs or anything other than static site assets
+*.pdf
+.assetsignore
