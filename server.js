@@ -6,10 +6,6 @@ const app = require('./app')
 
 const port = process.env.PORT || 3000
 
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-  console.warn('EMAIL_USER / EMAIL_PASS are not set: the contact form will show an error instead of sending mail.')
-}
-
 // Older versions left merged PDFs in public/ and raw uploads in uploads/. The current
 // version writes nothing to disk; remove only those known leftovers, matched by exact name pattern.
 function removeLegacyTempFiles() {

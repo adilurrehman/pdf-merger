@@ -1,11 +1,8 @@
 const express = require('express')
 const path = require('path')
-const tls = require('tls')
 const crypto = require('crypto')
 const helmet = require('helmet')
-const nodemailer = require('nodemailer')
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit')
-const { body, validationResult } = require('express-validator')
 const app = express()
 const multer  = require('multer')
 const {mergePDF}  = require('./mergePDF')
@@ -48,7 +45,7 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
             fontSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://fonts.gstatic.com'],
             imgSrc: ["'self'", 'data:', 'https://ui-avatars.com'],
-            connectSrc: ["'self'"],
+            connectSrc: ["'self'", 'https://api.web3forms.com'],  // contact form posts from the browser
             formAction: ["'self'"],
             frameAncestors: ["'none'"],
             objectSrc: ["'none'"],
@@ -93,21 +90,6 @@ function lazyRateLimit(options) {
     }
 }
 
-// Rate limiter for contact form - max 3 emails per hour per IP
-const contactLimiter = lazyRateLimit({
-    windowMs: 60 * 60 * 1000,  // 1 hour
-    max: 3,                     // 3 requests per hour
-    message: 'Too many messages sent. Please try again after 1 hour.',
-    handler: (req, res) => {
-        res.render('contact', {
-            title: 'Contact - PDF Merger',
-            page: 'contact',
-            success: null,
-            error: 'Too many messages sent. Please try again after 1 hour.'
-        })
-    }
-})
-
 // Rate limiter for merging - max 30 merge requests per 15 minutes per IP
 const mergeLimiter = lazyRateLimit({
     windowMs: 15 * 60 * 1000,
@@ -120,55 +102,6 @@ const mergeLimiter = lazyRateLimit({
         })
     }
 })
-
-// Nodemailer resolves the SMTP host to an IP before connecting, but Cloudflare Workers
-// sockets cannot connect to those raw IPs. On Workers, open the TLS socket by hostname instead.
-function getWorkersSocket(options, callback) {
-    const socket = tls.connect({ host: options.host, port: options.port, servername: options.host }, () => {
-        socket.removeListener('error', callback)
-        callback(null, { connection: socket, secured: true })
-    })
-    socket.once('error', callback)
-}
-
-// Email transporter configuration
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    ...(onWorkers && { getSocket: getWorkersSocket })
-})
-
-// Blocked emails/domains list
-const blockedDomains = ['tempmail.com', 'throwaway.com', 'mailinator.com', 'guerrillamail.com']
-const blockedWords = ['viagra', 'casino', 'lottery', 'winner', 'free money']
-
-// Escape text for the notification email's HTML body
-function escapeHtml(text) {
-    return String(text).replace(/[&<>"']/g, char => `&#${char.charCodeAt(0)};`)
-}
-
-// Check for spam content
-function isSpam(name, email, message) {
-    const content = `${name} ${email} ${message}`.toLowerCase()
-
-    // Check blocked domains
-    const emailDomain = email.split('@')[1]
-    if (blockedDomains.includes(emailDomain)) {
-        return true
-    }
-
-    // Check spam words
-    for (let word of blockedWords) {
-        if (content.includes(word)) {
-            return true
-        }
-    }
-
-    return false
-}
 
 app.get('/', (req, res) => {
   res.render('index', { title: 'PDF Merger', page: 'home' })
@@ -185,85 +118,6 @@ app.get('/developer', (req, res) => {
 app.get('/contact', (req, res) => {
   res.render('contact', { title: 'Contact - PDF Merger', page: 'contact', success: null, error: null })
 })
-
-// Handle contact form with rate limiting and validation
-app.post('/contact',
-    contactLimiter,
-    [
-        body('name').trim().isLength({ min: 2, max: 100 }).escape(),
-        body('email').isEmail().normalizeEmail(),
-        body('message').trim().isLength({ min: 10, max: 1000 }).escape()
-    ],
-    async (req, res) => {
-        const errors = validationResult(req)
-
-        if (!errors.isEmpty()) {
-            return res.render('contact', {
-                title: 'Contact - PDF Merger',
-                page: 'contact',
-                success: null,
-                error: 'Invalid input. Name: 2-100 chars, Message: 10-1000 chars, Valid email required.'
-            })
-        }
-
-        const { name, email, message } = req.body
-
-        // Check for spam
-        if (isSpam(name, email, message)) {
-            return res.render('contact', {
-                title: 'Contact - PDF Merger',
-                page: 'contact',
-                success: null,
-                error: 'Your message was flagged as spam.'
-            })
-        }
-
-        // Without credentials nothing can be sent; say so instead of failing inside Nodemailer
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-            return res.render('contact', {
-                title: 'Contact - PDF Merger',
-                page: 'contact',
-                success: null,
-                error: 'The contact form is temporarily unavailable. Please email adilurrehmanofficial@gmail.com directly.'
-            })
-        }
-
-        const mailOptions = {
-            from: 'akkakar128@gmail.com',
-            to: 'akkakar128@gmail.com',
-            replyTo: email,
-            subject: `[Contact Form] Message from ${name}`,
-            html: `
-                <h3>New Contact Form Submission</h3>
-                <p><strong>Name:</strong> ${name}</p>
-                <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-                <p><strong>IP:</strong> ${escapeHtml(clientIp(req))}</p>
-                <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
-                <hr>
-                <p><strong>Message:</strong></p>
-                <p>${message}</p>
-            `
-        }
-
-        try {
-            await transporter.sendMail(mailOptions)
-            res.render('contact', {
-                title: 'Contact - PDF Merger',
-                page: 'contact',
-                success: 'Message sent successfully!',
-                error: null
-            })
-        } catch (err) {
-            console.error('Email Error:', err.message)
-            res.render('contact', {
-                title: 'Contact - PDF Merger',
-                page: 'contact',
-                success: null,
-                error: 'Failed to send message. Please try again.'
-            })
-        }
-    }
-)
 
 const INVALID_RANGES_MESSAGE = 'Invalid page ranges. Use formats like 1-3, 5, 7-10 or "all".'
 

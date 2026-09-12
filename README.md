@@ -20,7 +20,6 @@ A free, fast online tool to merge PDF files into a single document.
 - 2 to 10 PDF files per merge
 - 5MB maximum per file
 - 30 merge requests per 15 minutes per IP address
-- 3 contact form messages per hour per IP address
 
 Files are merged in the order they were added. To change the order, remove files and add them again.
 
@@ -38,16 +37,16 @@ Protections:
 - Uploads are checked for real PDF content, not just the MIME type the browser reports
 - Strict server-side validation of page ranges
 - Hard limits on file count, file size, form fields and request size
-- Rate limiting on merging and on the contact form, and a cap on concurrent merges
+- Rate limiting on merging and a cap on concurrent merges
 - Security headers via [helmet](https://helmetjs.github.io/), including a nonce-based Content Security Policy
 - Subresource Integrity on the Bootstrap CDN files
 - Errors are shown without stack traces or internal paths
-- Contact form input validation, sanitization and spam filtering
+- Contact form validation and spam filtering in the browser, plus a Web3Forms honeypot (botcheck) field
 
 Notes:
 
 - Rate limits are kept in memory, so they apply per server instance (or per Cloudflare Worker isolate), not globally.
-- Contact form messages are emailed to the site owner through Gmail and include the sender's IP address.
+- The contact form is sent from your browser directly to [Web3Forms](https://web3forms.com/), which emails it to the site owner. The Web3Forms access key in the page is public by design: it can only submit to this form's inbox.
 - Use HTTPS in production. Cloudflare Workers provides it automatically.
 
 ## 🛠️ Tech Stack
@@ -55,8 +54,8 @@ Notes:
 - **Backend:** Node.js, Express.js
 - **Frontend:** EJS, Bootstrap 5, CSS3
 - **PDF Processing:** pdf-merger-js (pdf-lib)
-- **Email:** Nodemailer
-- **Security:** helmet, express-rate-limit, express-validator
+- **Contact form:** Web3Forms API (called from the browser)
+- **Security:** helmet, express-rate-limit
 - **Hosting:** Node.js, Docker, or Cloudflare Workers
 
 ## 📦 Installation
@@ -74,24 +73,12 @@ Requires Node.js 22 or newer.
    npm ci
    ```
 
-3. **Create environment file**
-   ```bash
-   cp .env.example .env
-   ```
-
-4. **Configure environment variables** (a Gmail app password, not your account password)
-   ```env
-   EMAIL_USER=your_email@gmail.com
-   EMAIL_PASS=your_app_password
-   ```
-   Without these the site still works, but the contact form shows an error instead of sending.
-
-5. **Start the server**
+3. **Start the server**
    ```bash
    npm start
    ```
 
-6. **Open in browser**
+4. **Open in browser**
    ```
    http://localhost:3000
    ```
@@ -103,12 +90,8 @@ The same app runs on Cloudflare Workers (see `wrangler.jsonc` and `worker.js`).
 
 ```bash
 npm run worker:dev                     # local Workers runtime
-npx wrangler secret put EMAIL_USER     # production secrets
-npx wrangler secret put EMAIL_PASS
 npm run worker:deploy
 ```
-
-For local `wrangler dev`, copy `.dev.vars.example` to `.dev.vars` and fill it in.
 
 ## 🐳 Docker
 
