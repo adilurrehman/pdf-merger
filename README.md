@@ -47,7 +47,7 @@ Protections:
 Notes:
 
 - Rate limits are kept in memory, so they apply per server instance (or per Cloudflare Worker isolate), not globally.
-- Contact form messages are emailed to the site owner through Gmail and include the sender's IP address.
+- Contact form messages (name, email and message) are forwarded to the site owner by [Web3Forms](https://web3forms.com/). The access key stays on the server and is never sent to the browser.
 - Use HTTPS in production. Cloudflare Workers provides it automatically.
 
 ## 🛠️ Tech Stack
@@ -55,7 +55,7 @@ Notes:
 - **Backend:** Node.js, Express.js
 - **Frontend:** EJS, Bootstrap 5, CSS3
 - **PDF Processing:** pdf-merger-js (pdf-lib)
-- **Email:** Nodemailer
+- **Contact form:** Web3Forms API (called server-side)
 - **Security:** helmet, express-rate-limit, express-validator
 - **Hosting:** Node.js, Docker, or Cloudflare Workers
 
@@ -79,12 +79,11 @@ Requires Node.js 22 or newer.
    cp .env.example .env
    ```
 
-4. **Configure environment variables** (a Gmail app password, not your account password)
+4. **Configure environment variables** (your [Web3Forms](https://web3forms.com/) access key)
    ```env
-   EMAIL_USER=your_email@gmail.com
-   EMAIL_PASS=your_app_password
+   WEB3FORMS_ACCESS_KEY=your_web3forms_access_key
    ```
-   Without these the site still works, but the contact form shows an error instead of sending.
+   Without it the site still works, but the contact form shows an error instead of sending.
 
 5. **Start the server**
    ```bash
@@ -103,8 +102,7 @@ The same app runs on Cloudflare Workers (see `wrangler.jsonc` and `worker.js`).
 
 ```bash
 npm run worker:dev                     # local Workers runtime
-npx wrangler secret put EMAIL_USER     # production secrets
-npx wrangler secret put EMAIL_PASS
+npx wrangler secret put WEB3FORMS_ACCESS_KEY   # production secret
 npm run worker:deploy
 ```
 

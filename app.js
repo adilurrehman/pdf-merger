@@ -1,9 +1,7 @@
 const express = require('express')
 const path = require('path')
-const tls = require('tls')
 const crypto = require('crypto')
 const helmet = require('helmet')
-const nodemailer = require('nodemailer')
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit')
 const { body, validationResult } = require('express-validator')
 const app = express()
@@ -121,34 +119,12 @@ const mergeLimiter = lazyRateLimit({
     }
 })
 
-// Nodemailer resolves the SMTP host to an IP before connecting, but Cloudflare Workers
-// sockets cannot connect to those raw IPs. On Workers, open the TLS socket by hostname instead.
-function getWorkersSocket(options, callback) {
-    const socket = tls.connect({ host: options.host, port: options.port, servername: options.host }, () => {
-        socket.removeListener('error', callback)
-        callback(null, { connection: socket, secured: true })
-    })
-    socket.once('error', callback)
-}
-
-// Email transporter configuration
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    },
-    ...(onWorkers && { getSocket: getWorkersSocket })
-})
+// Contact messages are delivered by Web3Forms; the access key stays server-side (env var / Worker secret)
+const WEB3FORMS_URL = 'https://api.web3forms.com/submit'
 
 // Blocked emails/domains list
 const blockedDomains = ['tempmail.com', 'throwaway.com', 'mailinator.com', 'guerrillamail.com']
 const blockedWords = ['viagra', 'casino', 'lottery', 'winner', 'free money']
-
-// Escape text for the notification email's HTML body
-function escapeHtml(text) {
-    return String(text).replace(/[&<>"']/g, char => `&#${char.charCodeAt(0)};`)
-}
 
 // Check for spam content
 function isSpam(name, email, message) {
@@ -218,8 +194,9 @@ app.post('/contact',
             })
         }
 
-        // Without credentials nothing can be sent; say so instead of failing inside Nodemailer
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+        // Without an access key nothing can be sent; say so instead of failing at Web3Forms
+        const accessKey = process.env.WEB3FORMS_ACCESS_KEY
+        if (!accessKey) {
             return res.render('contact', {
                 title: 'Contact - PDF Merger',
                 page: 'contact',
@@ -228,25 +205,25 @@ app.post('/contact',
             })
         }
 
-        const mailOptions = {
-            from: 'akkakar128@gmail.com',
-            to: 'akkakar128@gmail.com',
-            replyTo: email,
-            subject: `[Contact Form] Message from ${name}`,
-            html: `
-                <h3>New Contact Form Submission</h3>
-                <p><strong>Name:</strong> ${name}</p>
-                <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-                <p><strong>IP:</strong> ${escapeHtml(clientIp(req))}</p>
-                <p><strong>Time:</strong> ${new Date().toLocaleString()}</p>
-                <hr>
-                <p><strong>Message:</strong></p>
-                <p>${message}</p>
-            `
-        }
-
         try {
-            await transporter.sendMail(mailOptions)
+            const response = await fetch(WEB3FORMS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({
+                    access_key: accessKey,
+                    name,
+                    email,
+                    message,
+                    subject: `[PDF Merger] Contact from ${name}`,
+                    from_name: 'PDF Merger Contact Form'
+                }),
+                signal: AbortSignal.timeout(10 * 1000)
+            })
+            // Web3Forms answers JSON { success, message }; anything else (e.g. an HTML challenge page) is a failure
+            const result = await response.json().catch(() => null)
+            if (!response.ok || result?.success !== true) {
+                throw new Error(`Web3Forms responded with HTTP ${response.status}${result?.message ? `: ${result.message}` : ''}`)
+            }
             res.render('contact', {
                 title: 'Contact - PDF Merger',
                 page: 'contact',
@@ -254,7 +231,7 @@ app.post('/contact',
                 error: null
             })
         } catch (err) {
-            console.error('Email Error:', err.message)
+            console.error('Contact Error:', err.message)
             res.render('contact', {
                 title: 'Contact - PDF Merger',
                 page: 'contact',

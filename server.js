@@ -6,8 +6,8 @@ const app = require('./app')
 
 const port = process.env.PORT || 3000
 
-if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-  console.warn('EMAIL_USER / EMAIL_PASS are not set: the contact form will show an error instead of sending mail.')
+if (!process.env.WEB3FORMS_ACCESS_KEY) {
+  console.warn('WEB3FORMS_ACCESS_KEY is not set: the contact form will show an error instead of sending messages.')
 }
 
 // Older versions left merged PDFs in public/ and raw uploads in uploads/. The current

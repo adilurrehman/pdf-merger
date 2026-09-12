@@ -4,8 +4,7 @@ const { startServer, makePdf, mergeForm } = require('./helpers')
 
 let server, url
 before(async () => {
-    delete process.env.EMAIL_USER
-    delete process.env.EMAIL_PASS
+    delete process.env.WEB3FORMS_ACCESS_KEY
     ;({ server, url } = await startServer())
 })
 after(() => server.close())
@@ -38,7 +37,7 @@ test('oversized form bodies get a plain error without stack traces or paths', as
     assert.doesNotMatch(body, /node_modules|at \w|[A-Z]:\\|\/home\//)
 })
 
-test('contact form reports missing email configuration instead of trying to send', async () => {
+test('contact form reports a missing Web3Forms access key instead of trying to send', async () => {
     const res = await fetch(url + '/contact', {
         method: 'POST',
         body: new URLSearchParams({ name: 'Test User', email: 'tester@example.org', message: 'Hello, this is a test message.' })
