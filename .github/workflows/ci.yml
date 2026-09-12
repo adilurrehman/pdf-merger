@@ -1,70 +1,65 @@
 # ==================================================
-# PDF Merger - CI/CD Pipeline
+# PDF Merger - CI Pipeline
 # ==================================================
-# This workflow runs on every push and pull request
-# to ensure code quality and successful builds
+# Runs tests, the security audit and a Docker build.
+# deploy.yml calls this workflow and only deploys when it passes.
 
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [develop]
   pull_request:
     branches: [main, master, develop]
+  workflow_call:
+
+permissions:
+  contents: read
 
 jobs:
   # ==================================================
   # BUILD & TEST JOB
   # ==================================================
   build:
-    name: Build & Test
+    name: Build & Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
-    
+        node-version: [22.x, 24.x]
+
     steps:
-      # Checkout the repository
       - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-      
-      # Setup Node.js
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
       - name: 🔧 Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
-      
-      # Install dependencies
+
       - name: 📦 Install Dependencies
-        run: npm ci --legacy-peer-deps || npm install
-      
-      # Create .env file for testing
-      - name: 🔐 Create Environment File
-        run: |
-          echo "EMAIL_USER=${{ secrets.EMAIL_USER }}" >> .env
-          echo "EMAIL_PASS=${{ secrets.EMAIL_PASS }}" >> .env
-      
-      # Run linting (if configured)
-      - name: 🔍 Run Linter
-        run: npm run lint --if-present
-        continue-on-error: true
-      
-      # Run tests (if configured)
+        run: npm ci
+
       - name: 🧪 Run Tests
-        run: npm test --if-present
-        continue-on-error: true
-      
-      # Check if server starts successfully
+        run: npm test
+
       - name: 🚀 Test Server Startup
         run: |
-          timeout 10s node server.js &
-          sleep 5
-          curl -f http://localhost:3000 || exit 1
+          node server.js &
+          for i in $(seq 1 20); do
+            if curl -fsS -o /dev/null http://localhost:3000/; then exit 0; fi
+            sleep 1
+          done
+          echo "Server did not start"
+          exit 1
+
+      - name: ☁️ Check Cloudflare Worker Build
+        run: npx wrangler deploy --dry-run --outdir "$RUNNER_TEMP/worker-dist"
         env:
-          EMAIL_USER: test@example.com
-          EMAIL_PASS: testpassword
+          WRANGLER_SEND_METRICS: 'false'
 
   # ==================================================
   # SECURITY SCAN JOB
@@ -72,55 +67,48 @@ jobs:
   security:
     name: Security Audit
     runs-on: ubuntu-latest
-    needs: build
-    
+
     steps:
       - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-      
-      - name: 🔧 Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          node-version: '20.x'
+          persist-credentials: false
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24.x'
           cache: 'npm'
-      
+
       - name: 📦 Install Dependencies
-        run: npm ci --legacy-peer-deps || npm install
-      
+        run: npm ci
+
       - name: 🔒 Run Security Audit
         run: npm audit --audit-level=high
-        continue-on-error: true
 
   # ==================================================
-  # DOCKER BUILD JOB (Optional)
+  # DOCKER BUILD JOB (build only, nothing is pushed)
   # ==================================================
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
     steps:
       - name: 📥 Checkout Repository
-        uses: actions/checkout@v4
-      
-      - name: 🐳 Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: 🔐 Login to Docker Hub
-        uses: docker/login-action@v3
-        if: github.event_name != 'pull_request'
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-        continue-on-error: true
-      
+          persist-credentials: false
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
       - name: 🏗️ Build Docker Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: .
           push: false
           tags: pdf-merger:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-        continue-on-error: true

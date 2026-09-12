@@ -43,7 +43,7 @@
                 </form>
     </div>
 
-    <script>
+    <script nonce="<%= nonce %>">
         const fileInput = document.getElementById('exampleFormControlFile1');
         const dropZone = document.getElementById('dropZone');
         const warning = document.getElementById('fileWarning');
@@ -206,56 +206,77 @@
                 submitBtn.disabled = false;
             }
 
-            // Show file list with remove buttons
-            if (fileCount === 0) {
-                fileList.innerHTML = '';
-            } else {
-                let listHtml = '<ul class="list-group list-group-flush">';
+            // Show file list with remove buttons. Built from DOM nodes so file names
+            // are always plain text and never parsed as HTML
+            fileList.replaceChildren();
+            if (fileCount > 0) {
+                const list = document.createElement('ul');
+                list.className = 'list-group list-group-flush';
                 selectedFiles.forEach((file, index) => {
                     const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                    
+                    const item = document.createElement('li');
+                    const label = document.createElement('span');
+                    label.textContent = `${index + 1}. ${file.name} (${sizeMB} MB)`;
+                    const removeBtn = document.createElement('button');
+                    removeBtn.type = 'button';
+                    removeBtn.className = 'btn btn-danger btn-sm';
+                    removeBtn.title = 'Remove file';
+                    removeBtn.textContent = '×';
+                    removeBtn.addEventListener('click', () => removeFile(index));
+
                     if (mergeMode === 'all') {
                         // Simple list without page inputs
-                        listHtml += `
-                            <li class="list-group-item bg-secondary text-light d-flex justify-content-between align-items-center">
-                                <span>${index + 1}. ${file.name} (${sizeMB} MB)</span>
-                                <button type="button" class="btn btn-danger btn-sm" onclick="removeFile(${index})" title="Remove file">
-                                    &times;
-                                </button>
-                            </li>`;
+                        item.className = 'list-group-item bg-secondary text-light d-flex justify-content-between align-items-center';
+                        item.append(label, removeBtn);
                     } else {
                         // List with page range inputs
-                        listHtml += `
-                            <li class="list-group-item bg-secondary text-light">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <span>${index + 1}. ${file.name} (${sizeMB} MB)</span>
-                                    <button type="button" class="btn btn-danger btn-sm" onclick="removeFile(${index})" title="Remove file">
-                                        &times;
-                                    </button>
-                                </div>
-                                <div class="page-range-inputs">
-                                    <div class="form-row align-items-center">
-                                        <div class="col-auto">
-                                            <label class="small">Pages:</label>
-                                        </div>
-                                        <div class="col-auto">
-                                            <input type="text" class="form-control form-control-sm page-range-input" 
-                                                   name="pageRanges[${index}]" 
-                                                   placeholder="e.g., 1-3, 5, 7-10 or all" 
-                                                   value="all"
-                                                   style="width: 180px;">
-                                        </div>
-                                        <div class="col-auto">
-                                            <small class="text-muted">Use: 1-3, 5, 7-10 or "all"</small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </li>`;
+                        item.className = 'list-group-item bg-secondary text-light';
+                        const header = document.createElement('div');
+                        header.className = 'd-flex justify-content-between align-items-center mb-2';
+                        header.append(label, removeBtn);
+                        item.append(header, createPageRangeInputs(index));
                     }
+                    list.append(item);
                 });
-                listHtml += '</ul>';
-                fileList.innerHTML = listHtml;
+                fileList.append(list);
             }
+        }
+
+        // Page range row for one file in "Merge Specific Pages" mode
+        function createPageRangeInputs(index) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'page-range-inputs';
+            const row = document.createElement('div');
+            row.className = 'form-row align-items-center';
+
+            const labelCol = document.createElement('div');
+            labelCol.className = 'col-auto';
+            const label = document.createElement('label');
+            label.className = 'small';
+            label.textContent = 'Pages:';
+            labelCol.append(label);
+
+            const inputCol = document.createElement('div');
+            inputCol.className = 'col-auto';
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control form-control-sm page-range-input';
+            input.name = `pageRanges[${index}]`;
+            input.placeholder = 'e.g., 1-3, 5, 7-10 or all';
+            input.value = 'all';
+            input.style.width = '180px';
+            inputCol.append(input);
+
+            const hintCol = document.createElement('div');
+            hintCol.className = 'col-auto';
+            const hint = document.createElement('small');
+            hint.className = 'text-muted';
+            hint.textContent = 'Use: 1-3, 5, 7-10 or "all"';
+            hintCol.append(hint);
+
+            row.append(labelCol, inputCol, hintCol);
+            wrapper.append(row);
+            return wrapper;
         }
 
         fileInput.addEventListener('change', function () {

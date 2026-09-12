@@ -37,6 +37,13 @@ __tests__/
 *.test.js
 *.spec.js
 
-# Uploaded files (will be created fresh in container)
-uploads/*
-!uploads/.gitkeep
+# Uploads, generated PDFs and temp output (the app writes none)
+uploads/
+tmp/
+*.pdf
+
+# Local secrets, Cloudflare tooling and tests (not used by the Node image)
+.dev.vars*
+.wrangler/
+dist/
+test/

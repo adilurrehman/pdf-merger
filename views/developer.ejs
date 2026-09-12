@@ -6,9 +6,11 @@
     <title>Developer - Adil ur Rehman Kakar</title>
     
     <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+          integrity="sha384-4LISF5TTJX/fLmGSxO53rV4miRxdg84mZsxmO8Rx5jGtp/LbrixFETvWa5a6sESd" crossorigin="anonymous">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
@@ -807,8 +809,7 @@
                             <div class="avatar-ring"></div>
                             <img src="/assets/images/Adil's%20Avatar.webp" 
                                  alt="Adil ur Rehman Kakar" 
-                                 class="developer-avatar"
-                                 onerror="this.src='https://ui-avatars.com/api/?name=Adil+ur+Rehman&background=007bff&color=fff&size=220&bold=true'">
+                                 class="developer-avatar">
                             <div class="avatar-status"></div>
                         </div>
                     </div>
@@ -876,15 +877,15 @@
                                 <i class="bi bi-envelope-fill"></i>
                                 <span>Email</span>
                             </a>
-                            <a href="https://linkedin.com/in/adilurrehmanofficial" target="_blank" class="social-btn social-linkedin" title="LinkedIn Profile">
+                            <a href="https://linkedin.com/in/adilurrehmanofficial" target="_blank" rel="noopener noreferrer" class="social-btn social-linkedin" title="LinkedIn Profile">
                                 <i class="bi bi-linkedin"></i>
                                 <span>LinkedIn</span>
                             </a>
-                            <a href="https://instagram.com/adilurrehmanofficial" target="_blank" class="social-btn social-instagram" title="Instagram">
+                            <a href="https://instagram.com/adilurrehmanofficial" target="_blank" rel="noopener noreferrer" class="social-btn social-instagram" title="Instagram">
                                 <i class="bi bi-instagram"></i>
                                 <span>Instagram</span>
                             </a>
-                            <a href="https://github.com/adilurrehman" target="_blank" class="social-btn social-github" title="GitHub Profile">
+                            <a href="https://github.com/adilurrehman" target="_blank" rel="noopener noreferrer" class="social-btn social-github" title="GitHub Profile">
                                 <i class="bi bi-github"></i>
                                 <span>GitHub</span>
                             </a>
@@ -896,10 +897,24 @@
     </section>
 
     <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+    <!-- Avatar fallback (replaces an inline onerror handler, which the CSP blocks) -->
+    <script nonce="<%= nonce %>">
+        (function() {
+            const avatar = document.querySelector('.developer-avatar');
+            if (!avatar) return;
+            const useFallback = function() {
+                avatar.src = 'https://ui-avatars.com/api/?name=Adil+ur+Rehman&background=007bff&color=fff&size=220&bold=true';
+            };
+            if (avatar.complete && avatar.naturalWidth === 0) useFallback();
+            else avatar.addEventListener('error', useFallback, { once: true });
+        })();
+    </script>
     
     <!-- Theme Toggle Script (Self-Contained) -->
-    <script>
+    <script nonce="<%= nonce %>">
         // ============================================
         // THEME TOGGLE - SELF-CONTAINED SCRIPT
         // Copy this script to use in other projects

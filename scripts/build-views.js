@@ -9,7 +9,7 @@ const viewsDir = path.join(__dirname, '..', 'views')
 const outFile = path.join(__dirname, '..', 'dist', 'views.js')
 
 // Every local variable the templates read; strict mode (no `with`) needs them declared
-const locals = ['title', 'page', 'error', 'success']
+const locals = ['title', 'page', 'error', 'success', 'nonce']
 
 function listTemplates(dir) {
     return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {

@@ -1,4 +1,5 @@
-// Merges PDFs entirely in memory: takes file Buffers, returns the merged PDF as a Buffer
+// Merges PDFs entirely in memory: takes file Buffers, returns the merged PDF as a Buffer.
+// pageRanges is null or, per file, 'all' or an array of page numbers already validated by the caller.
 const mergePDF = async (fileBuffers, pageRanges = null) => {
   const PDFMerger = (await import('pdf-merger-js')).default;
   const merger = new PDFMerger();
@@ -8,8 +9,8 @@ const mergePDF = async (fileBuffers, pageRanges = null) => {
     const fileBuffer = fileBuffers[i];
 
     // Check if specific pages are requested
-    if (pageRanges && pageRanges[i] && pageRanges[i].toLowerCase() !== 'all') {
-      // Parse page range (e.g., "1-3, 5, 7-10")
+    if (pageRanges && Array.isArray(pageRanges[i])) {
+      // Add only the selected pages (e.g., [1, 2, 3, 5])
       await merger.add(fileBuffer, pageRanges[i]);
     } else {
       // Add all pages
