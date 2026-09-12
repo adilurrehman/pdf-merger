@@ -5,8 +5,7 @@ const { startServer } = require('./helpers')
 
 let server, url
 before(async () => {
-    delete process.env.EMAIL_USER
-    delete process.env.EMAIL_PASS
+    delete process.env.WEB3FORMS_ACCESS_KEY
     ;({ server, url } = await startServer())
 })
 after(() => server.close())
@@ -26,7 +25,7 @@ test('flags spam content', async () => {
     assert.match(html, /flagged as spam/)
 })
 
-test('valid input without email credentials shows a clean error, not a crash', async () => {
+test('valid input without a Web3Forms access key shows a clean error, not a crash', async () => {
     const { status, html } = await postContact({
         name: '<script>alert(1)</script>', email: 'tester@example.org', message: 'Hello, this is a valid message.'
     })

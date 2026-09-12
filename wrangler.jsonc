@@ -20,8 +20,7 @@
   "observability": {
     "enabled": true
   }
-  // EMAIL_USER and EMAIL_PASS are Worker secrets:
-  //   npx wrangler secret put EMAIL_USER
-  //   npx wrangler secret put EMAIL_PASS
-  // For local `wrangler dev`, put them in .dev.vars (see .dev.vars.example).
+  // WEB3FORMS_ACCESS_KEY is a Worker secret:
+  //   npx wrangler secret put WEB3FORMS_ACCESS_KEY
+  // For local `wrangler dev`, put it in .dev.vars (see .dev.vars.example).
 }
