@@ -4,7 +4,7 @@
 # Multi-stage build for optimized production image
 
 # Stage 1: Build
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -12,10 +12,10 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Stage 2: Production
-FROM node:20-alpine AS production
+FROM node:24-alpine AS production
 
 WORKDIR /app
 
@@ -26,9 +26,6 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --chown=nodejs:nodejs . .
-
-# Create uploads directory
-RUN mkdir -p uploads && chown nodejs:nodejs uploads
 
 # Switch to non-root user
 USER nodejs

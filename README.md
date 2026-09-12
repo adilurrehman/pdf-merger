@@ -1,30 +1,67 @@
 # PDF Merger
 
-A free, fast, and secure online tool to merge multiple PDF files into a single document.
+A free, fast online tool to merge PDF files into a single document.
 
-![Node.js](https://img.shields.io/badge/Node.js-18+-green)
+![Node.js](https://img.shields.io/badge/Node.js-22+-green)
 ![Express](https://img.shields.io/badge/Express-5.x-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
 ## ✨ Features
 
-- 🚀 **Lightning Fast** - Merge PDFs in seconds
-- 🔒 **100% Secure** - Files are auto-deleted after processing
-- 📱 **Mobile Friendly** - Works on all devices
+- 🚀 **Fast** - Merge PDFs in seconds, entirely in memory
+- 📄 **Page Selection** - Choose specific pages from each PDF (e.g. `1-3, 5, 7-10` or `all`)
+- 🔄 **Drag & Drop** - Add files by dragging or browsing, and remove files before merging
 - 🎨 **Dark/Light Theme** - System preference aware
-- 📄 **Page Selection** - Choose specific pages from each PDF
-- 🔄 **Drag & Drop** - Easy file upload
-- 💯 **Free Forever** - No hidden fees or limits
+- 📱 **Mobile Friendly** - Works on all devices
+- 💯 **Free** - No account or registration needed
+
+## 📏 Limits
+
+- 2 to 10 PDF files per merge
+- 5MB maximum per file
+- 30 merge requests per 15 minutes per IP address
+- 3 contact form messages per hour per IP address
+
+Files are merged in the order they were added. To change the order, remove files and add them again.
+
+## 🔐 Privacy & Security
+
+What the app actually does with your files:
+
+- Uploaded PDFs are held **in memory only** for the duration of the request. They are never written to disk.
+- The merged PDF is sent straight back to your browser as a download. It is **not stored** and there is no public download URL.
+- Upload buffers are released as soon as the merge finishes or fails.
+- Server logs never contain file names or page selections.
+
+Protections:
+
+- Uploads are checked for real PDF content, not just the MIME type the browser reports
+- Strict server-side validation of page ranges
+- Hard limits on file count, file size, form fields and request size
+- Rate limiting on merging and on the contact form, and a cap on concurrent merges
+- Security headers via [helmet](https://helmetjs.github.io/), including a nonce-based Content Security Policy
+- Subresource Integrity on the Bootstrap CDN files
+- Errors are shown without stack traces or internal paths
+- Contact form input validation, sanitization and spam filtering
+
+Notes:
+
+- Rate limits are kept in memory, so they apply per server instance (or per Cloudflare Worker isolate), not globally.
+- Contact form messages are emailed to the site owner through Gmail and include the sender's IP address.
+- Use HTTPS in production. Cloudflare Workers provides it automatically.
 
 ## 🛠️ Tech Stack
 
 - **Backend:** Node.js, Express.js
 - **Frontend:** EJS, Bootstrap 5, CSS3
-- **PDF Processing:** pdf-merger-js
+- **PDF Processing:** pdf-merger-js (pdf-lib)
 - **Email:** Nodemailer
-- **Security:** express-rate-limit, express-validator
+- **Security:** helmet, express-rate-limit, express-validator
+- **Hosting:** Node.js, Docker, or Cloudflare Workers
 
 ## 📦 Installation
+
+Requires Node.js 22 or newer.
 
 1. **Clone the repository**
    ```bash
@@ -34,7 +71,7 @@ A free, fast, and secure online tool to merge multiple PDF files into a single d
 
 2. **Install dependencies**
    ```bash
-   npm install
+   npm ci
    ```
 
 3. **Create environment file**
@@ -42,11 +79,12 @@ A free, fast, and secure online tool to merge multiple PDF files into a single d
    cp .env.example .env
    ```
 
-4. **Configure environment variables**
+4. **Configure environment variables** (a Gmail app password, not your account password)
    ```env
    EMAIL_USER=your_email@gmail.com
    EMAIL_PASS=your_app_password
    ```
+   Without these the site still works, but the contact form shows an error instead of sending.
 
 5. **Start the server**
    ```bash
@@ -57,6 +95,20 @@ A free, fast, and secure online tool to merge multiple PDF files into a single d
    ```
    http://localhost:3000
    ```
+   Set `PORT` to use a different port.
+
+## ☁️ Cloudflare Workers
+
+The same app runs on Cloudflare Workers (see `wrangler.jsonc` and `worker.js`).
+
+```bash
+npm run worker:dev                     # local Workers runtime
+npx wrangler secret put EMAIL_USER     # production secrets
+npx wrangler secret put EMAIL_PASS
+npm run worker:deploy
+```
+
+For local `wrangler dev`, copy `.dev.vars.example` to `.dev.vars` and fill it in.
 
 ## 🐳 Docker
 
@@ -73,60 +125,41 @@ docker run -p 3000:3000 --env-file .env pdf-merger
 
 ```
 PdfMerger/
-├── .github/
-│   └── workflows/
-│       ├── ci.yml          # CI pipeline
-│       └── deploy.yml      # CD pipeline
+├── .github/workflows/
+│   ├── ci.yml              # Tests, security audit, Docker build
+│   └── deploy.yml          # Runs CI, then deploys
+├── public/assets/          # Static CSS and images (no PDFs)
+├── scripts/
+│   └── build-views.js      # Precompiles EJS views for Workers
+├── test/                   # node:test suites
 ├── views/
-│   ├── assets/
-│   │   ├── images/
-│   │   └── style.css
 │   ├── partials/
-│   │   ├── header.ejs
-│   │   └── footer.ejs
 │   ├── about.ejs
 │   ├── contact.ejs
 │   ├── developer.ejs
 │   └── index.ejs
-├── uploads/                # Temporary file storage
-├── .env.example
-├── .gitignore
+├── app.js                  # Express app (routes, security, merge flow)
+├── mergePDF.js             # In-memory PDF merging
+├── server.js               # Node.js entry point
+├── worker.js               # Cloudflare Workers entry point
+├── wrangler.jsonc
 ├── Dockerfile
-├── docker-compose.yml
-├── mergePDF.js
-├── package.json
-├── server.js
-└── README.md
+└── docker-compose.yml
 ```
-
-## 🔐 Security Features
-
-- ✅ No permanent file storage
-- ✅ Automatic file deletion after processing
-- ✅ Rate limiting on contact form
-- ✅ Input validation and sanitization
-- ✅ Spam detection
-- ✅ HTTPS recommended for production
-
-## 🚀 Deployment
-
-The project includes CI/CD pipelines for:
-- Vercel
-- Railway
-- Render
-- Heroku
-- VPS (via SSH)
-
-See [.github/workflows/deploy.yml](.github/workflows/deploy.yml) for configuration.
 
 ## 📝 Scripts
 
 ```bash
-npm start       # Start production server
-npm run dev     # Start with nodemon (development)
-npm test        # Run tests (if configured)
-npm run lint    # Run linter (if configured)
+npm start              # Start the Node.js server
+npm run dev            # Start with nodemon (development)
+npm test               # Run the test suite
+npm run worker:dev     # Run on the local Cloudflare Workers runtime
+npm run worker:deploy  # Deploy to Cloudflare Workers
 ```
+
+## 🚀 Deployment
+
+`deploy.yml` runs the full CI first and only deploys if it passes. It supports Cloudflare Workers, Vercel, Railway, Render, Heroku and a VPS over SSH; each provider runs only when its secrets are configured.
 
 ## 🤝 Contributing
 

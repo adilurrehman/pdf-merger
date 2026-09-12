@@ -11,8 +11,10 @@ node_modules/
 # Wrangler local state
 .wrangler/
 
-# Uploaded files
+# Uploaded files, generated PDFs and temp output (the app writes none, but never commit any)
 uploads/
+tmp/
+*.pdf
 
 # OS files
 .DS_Store
