@@ -16,6 +16,8 @@ for (const path of pages) {
         assert.match(csp, /script-src-attr 'none'/)
         assert.match(csp, /object-src 'none'/)
         assert.match(csp, /frame-ancestors 'none'/)
+        assert.match(csp, /connect-src 'self' https:\/\/api\.web3forms\.com(;|$)/)
+        assert.match(csp, /form-action 'self'(;|$)/)
         assert.doesNotMatch(csp, /unsafe-eval/)
         assert.equal(res.headers.get('x-content-type-options'), 'nosniff')
         assert.equal(res.headers.get('x-frame-options'), 'DENY')

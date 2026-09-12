@@ -3,10 +3,7 @@ const assert = require('node:assert/strict')
 const { startServer, makePdf, mergeForm } = require('./helpers')
 
 let server, url
-before(async () => {
-    delete process.env.WEB3FORMS_ACCESS_KEY
-    ;({ server, url } = await startServer())
-})
+before(async () => ({ server, url } = await startServer()))
 after(() => server.close())
 
 // Collect everything written to the console while fn runs
@@ -35,15 +32,6 @@ test('oversized form bodies get a plain error without stack traces or paths', as
     const body = await res.text()
     assert.equal(body, 'Request too large.')
     assert.doesNotMatch(body, /node_modules|at \w|[A-Z]:\\|\/home\//)
-})
-
-test('contact form reports a missing Web3Forms access key instead of trying to send', async () => {
-    const res = await fetch(url + '/contact', {
-        method: 'POST',
-        body: new URLSearchParams({ name: 'Test User', email: 'tester@example.org', message: 'Hello, this is a test message.' })
-    })
-    assert.equal(res.status, 200)
-    assert.match(await res.text(), /contact form is temporarily unavailable/)
 })
 
 test('merging does not log uploaded file names or page ranges', async () => {

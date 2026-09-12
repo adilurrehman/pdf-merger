@@ -3,7 +3,6 @@ const path = require('path')
 const crypto = require('crypto')
 const helmet = require('helmet')
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit')
-const { body, validationResult } = require('express-validator')
 const app = express()
 const multer  = require('multer')
 const {mergePDF}  = require('./mergePDF')
@@ -46,7 +45,7 @@ app.use(helmet({
             styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.jsdelivr.net', 'https://fonts.googleapis.com'],
             fontSrc: ["'self'", 'https://cdn.jsdelivr.net', 'https://fonts.gstatic.com'],
             imgSrc: ["'self'", 'data:', 'https://ui-avatars.com'],
-            connectSrc: ["'self'"],
+            connectSrc: ["'self'", 'https://api.web3forms.com'],  // contact form posts from the browser
             formAction: ["'self'"],
             frameAncestors: ["'none'"],
             objectSrc: ["'none'"],
@@ -91,21 +90,6 @@ function lazyRateLimit(options) {
     }
 }
 
-// Rate limiter for contact form - max 3 emails per hour per IP
-const contactLimiter = lazyRateLimit({
-    windowMs: 60 * 60 * 1000,  // 1 hour
-    max: 3,                     // 3 requests per hour
-    message: 'Too many messages sent. Please try again after 1 hour.',
-    handler: (req, res) => {
-        res.render('contact', {
-            title: 'Contact - PDF Merger',
-            page: 'contact',
-            success: null,
-            error: 'Too many messages sent. Please try again after 1 hour.'
-        })
-    }
-})
-
 // Rate limiter for merging - max 30 merge requests per 15 minutes per IP
 const mergeLimiter = lazyRateLimit({
     windowMs: 15 * 60 * 1000,
@@ -118,33 +102,6 @@ const mergeLimiter = lazyRateLimit({
         })
     }
 })
-
-// Contact messages are delivered by Web3Forms; the access key stays server-side (env var / Worker secret)
-const WEB3FORMS_URL = 'https://api.web3forms.com/submit'
-
-// Blocked emails/domains list
-const blockedDomains = ['tempmail.com', 'throwaway.com', 'mailinator.com', 'guerrillamail.com']
-const blockedWords = ['viagra', 'casino', 'lottery', 'winner', 'free money']
-
-// Check for spam content
-function isSpam(name, email, message) {
-    const content = `${name} ${email} ${message}`.toLowerCase()
-
-    // Check blocked domains
-    const emailDomain = email.split('@')[1]
-    if (blockedDomains.includes(emailDomain)) {
-        return true
-    }
-
-    // Check spam words
-    for (let word of blockedWords) {
-        if (content.includes(word)) {
-            return true
-        }
-    }
-
-    return false
-}
 
 app.get('/', (req, res) => {
   res.render('index', { title: 'PDF Merger', page: 'home' })
@@ -161,86 +118,6 @@ app.get('/developer', (req, res) => {
 app.get('/contact', (req, res) => {
   res.render('contact', { title: 'Contact - PDF Merger', page: 'contact', success: null, error: null })
 })
-
-// Handle contact form with rate limiting and validation
-app.post('/contact',
-    contactLimiter,
-    [
-        body('name').trim().isLength({ min: 2, max: 100 }).escape(),
-        body('email').isEmail().normalizeEmail(),
-        body('message').trim().isLength({ min: 10, max: 1000 }).escape()
-    ],
-    async (req, res) => {
-        const errors = validationResult(req)
-
-        if (!errors.isEmpty()) {
-            return res.render('contact', {
-                title: 'Contact - PDF Merger',
-                page: 'contact',
-                success: null,
-                error: 'Invalid input. Name: 2-100 chars, Message: 10-1000 chars, Valid email required.'
-            })
-        }
-
-        const { name, email, message } = req.body
-
-        // Check for spam
-        if (isSpam(name, email, message)) {
-            return res.render('contact', {
-                title: 'Contact - PDF Merger',
-                page: 'contact',
-                success: null,
-                error: 'Your message was flagged as spam.'
-            })
-        }
-
-        // Without an access key nothing can be sent; say so instead of failing at Web3Forms
-        const accessKey = process.env.WEB3FORMS_ACCESS_KEY
-        if (!accessKey) {
-            return res.render('contact', {
-                title: 'Contact - PDF Merger',
-                page: 'contact',
-                success: null,
-                error: 'The contact form is temporarily unavailable. Please email adilurrehmanofficial@gmail.com directly.'
-            })
-        }
-
-        try {
-            const response = await fetch(WEB3FORMS_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                body: JSON.stringify({
-                    access_key: accessKey,
-                    name,
-                    email,
-                    message,
-                    subject: `[PDF Merger] Contact from ${name}`,
-                    from_name: 'PDF Merger Contact Form'
-                }),
-                signal: AbortSignal.timeout(10 * 1000)
-            })
-            // Web3Forms answers JSON { success, message }; anything else (e.g. an HTML challenge page) is a failure
-            const result = await response.json().catch(() => null)
-            if (!response.ok || result?.success !== true) {
-                throw new Error(`Web3Forms responded with HTTP ${response.status}${result?.message ? `: ${result.message}` : ''}`)
-            }
-            res.render('contact', {
-                title: 'Contact - PDF Merger',
-                page: 'contact',
-                success: 'Message sent successfully!',
-                error: null
-            })
-        } catch (err) {
-            console.error('Contact Error:', err.message)
-            res.render('contact', {
-                title: 'Contact - PDF Merger',
-                page: 'contact',
-                success: null,
-                error: 'Failed to send message. Please try again.'
-            })
-        }
-    }
-)
 
 const INVALID_RANGES_MESSAGE = 'Invalid page ranges. Use formats like 1-3, 5, 7-10 or "all".'
 

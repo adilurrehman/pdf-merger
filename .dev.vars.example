@@ -1,3 +1,0 @@
-# Local secrets for `wrangler dev` - copy to .dev.vars (git-ignored)
-# In production set it with: npx wrangler secret put WEB3FORMS_ACCESS_KEY
-WEB3FORMS_ACCESS_KEY=your_web3forms_access_key

@@ -1,35 +1,60 @@
-// At most 3 contact posts here: the contact limit is 3 per hour per IP
+// The contact form is sent from the browser straight to Web3Forms; the server only renders the page
 const { test, before, after } = require('node:test')
 const assert = require('node:assert/strict')
 const { startServer } = require('./helpers')
 
 let server, url
-before(async () => {
-    delete process.env.WEB3FORMS_ACCESS_KEY
-    ;({ server, url } = await startServer())
-})
+before(async () => ({ server, url } = await startServer()))
 after(() => server.close())
 
-async function postContact(fields) {
-    const res = await fetch(url + '/contact', { method: 'POST', body: new URLSearchParams(fields) })
-    return { status: res.status, html: await res.text() }
+async function contactPage() {
+    const res = await fetch(url + '/contact')
+    return { res, html: await res.text() }
 }
 
-test('rejects invalid contact input', async () => {
-    const { html } = await postContact({ name: 'A', email: 'not-an-email', message: 'short' })
-    assert.match(html, /Invalid input/)
+test('contact page carries the Web3Forms fields and a hidden botcheck', async () => {
+    const { res, html } = await contactPage()
+    assert.equal(res.status, 200)
+    assert.match(html, /<input type="hidden" name="access_key" value="608dcbd3-ff87-4e85-b5b5-3eae6470ed11">/)
+    assert.match(html, /<input type="hidden" name="subject" value="\[PDF Merger\] Contact Form">/)
+    assert.match(html, /<input type="hidden" name="from_name" value="PDF Merger">/)
+    assert.match(html, /<input type="checkbox" name="botcheck" class="d-none"/)
 })
 
-test('flags spam content', async () => {
-    const { html } = await postContact({ name: 'Spam Bot', email: 'bot@mailinator.com', message: 'You are a lottery winner, claim now!' })
-    assert.match(html, /flagged as spam/)
+test('contact script submits to Web3Forms with AJAX and shows the existing messages', async () => {
+    const { res, html } = await contactPage()
+    const nonce = res.headers.get('content-security-policy').match(/'nonce-([^']+)'/)[1]
+    const js = [...html.matchAll(/<script nonce="([^"]+)">([\s\S]*?)<\/script>/g)]
+        .filter(([, scriptNonce]) => scriptNonce === nonce)
+        .map(([, , body]) => body)
+        .find(body => body.includes("getElementById('contactForm')"))
+    assert.ok(js, 'nonce-tagged contact script found')
+
+    assert.match(js, /fetch\('https:\/\/api\.web3forms\.com\/submit'/)
+    assert.match(js, /e\.preventDefault\(\)/)
+    assert.match(js, /submitBtn\.disabled = true/)
+    assert.match(js, /form\.reset\(\)/)
+    for (const text of [
+        'Message sent successfully!',
+        'Failed to send message. Please try again.',
+        'Invalid input. Name: 2-100 chars, Message: 10-1000 chars, Valid email required.',
+        'Your message was flagged as spam.'
+    ]) {
+        assert.ok(js.includes(text), text)
+    }
+    assert.doesNotMatch(js, /innerHTML/)
 })
 
-test('valid input without a Web3Forms access key shows a clean error, not a crash', async () => {
-    const { status, html } = await postContact({
-        name: '<script>alert(1)</script>', email: 'tester@example.org', message: 'Hello, this is a valid message.'
+test('CSP lets the page connect only to itself and Web3Forms', async () => {
+    const csp = (await contactPage()).res.headers.get('content-security-policy')
+    assert.match(csp, /connect-src 'self' https:\/\/api\.web3forms\.com(;|$)/)
+    assert.match(csp, /form-action 'self'(;|$)/)
+})
+
+test('the server no longer accepts contact submissions', async () => {
+    const res = await fetch(url + '/contact', {
+        method: 'POST',
+        body: new URLSearchParams({ name: 'Test User', email: 'tester@example.org', message: 'Hello, this is a message.' })
     })
-    assert.equal(status, 200)
-    assert.match(html, /temporarily unavailable/)
-    assert.ok(!html.includes('<script>alert(1)</script>'), 'input is not reflected')
+    assert.equal(res.status, 404)
 })
