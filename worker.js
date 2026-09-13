@@ -1,5 +1,6 @@
 // Cloudflare Workers entry point (wrangler dev / wrangler deploy).
 // Local Node.js uses server.js instead.
+import path from 'node:path'
 import { httpServerHandler } from 'cloudflare:node'
 import app from './app.js'
 import templates from './dist/views.js'
@@ -7,8 +8,10 @@ import templates from './dist/views.js'
 // EJS compiles templates with new Function(), which Workers disallow,
 // so views are precompiled at build time by scripts/build-views.js
 function renderTemplate(name, data) {
+    // Includes resolve relative to the including template, as EJS does on Node
+    const dir = path.posix.dirname(name)
     return templates[name](data, null, (includeName, includeData) =>
-        renderTemplate(includeName, { ...data, ...includeData }))
+        renderTemplate(path.posix.normalize(path.posix.join(dir, includeName)), { ...data, ...includeData }))
 }
 
 class PrecompiledView {
