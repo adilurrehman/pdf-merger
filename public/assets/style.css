@@ -218,8 +218,14 @@ body {
     color: #1e293b !important;
 }
 
-.light-theme .about-hero .lead {
-    color: #334155 !important;
+/* About hero subtitle: dedicated class so no utility class (text-light / opacity) can grey it out */
+.light-theme .about-hero-subtitle {
+    color: #0f172a !important;
+    opacity: 1 !important;
+}
+
+.dark-theme .about-hero-subtitle {
+    color: #e5e7eb !important;
     opacity: 1 !important;
 }
 
