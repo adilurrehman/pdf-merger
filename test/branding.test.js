@@ -49,13 +49,15 @@ test('favicon files are served with the right sizes', async () => {
     assert.deepEqual(manifest.icons.map(icon => icon.sizes), ['192x192', '512x512'])
 })
 
-test('navbar and footer use the logo with fixed dimensions (no layout shift)', async () => {
+test('navbar and footer have light and dark logo versions with identical fixed dimensions (no layout shift)', async () => {
     const html = await (await fetch(url + '/')).text()
-    assert.match(html, /<img src="\/assets\/images\/pdf-merger-logo-nav\.webp" alt="PDF Merger" width="114" height="44" class="brand-logo navbar-logo">/)
-    assert.match(html, /<img src="\/assets\/images\/pdf-merger-logo-nav\.webp" alt="PDF Merger" width="130" height="50" class="brand-logo footer-logo-img"/)
-    const logo = await fetch(url + '/assets/images/pdf-merger-logo-nav.webp')
-    assert.equal(logo.status, 200)
-    assert.equal(logo.headers.get('content-type'), 'image/webp')
+    for (const [file, theme] of [['pdf-merger-logo-nav', 'light'], ['pdf-merger-logo-nav-dark', 'dark']]) {
+        assert.match(html, new RegExp(`<img src="/assets/images/${file}\\.webp" alt="PDF Merger" width="114" height="44" class="brand-logo navbar-logo logo-for-${theme}">`))
+        assert.match(html, new RegExp(`<img src="/assets/images/${file}\\.webp" alt="PDF Merger" width="130" height="50" class="brand-logo footer-logo-img logo-for-${theme}"`))
+        const logo = await fetch(url + `/assets/images/${file}.webp`)
+        assert.equal(logo.status, 200, file)
+        assert.equal(logo.headers.get('content-type'), 'image/webp', file)
+    }
 })
 
 test('dotfiles in public/ are not served', async () => {

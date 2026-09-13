@@ -634,11 +634,20 @@ a:hover {
     flex-shrink: 0;
 }
 
-/* The "Merger" wordmark is dark green, so on dark backgrounds the logo sits on a soft light tile.
-   Padding is the same in both themes, so switching themes causes no layout shift. */
-.dark-theme .brand-logo {
-    background-color: rgba(255, 255, 255, 0.94);
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+/* Theme-specific logo files. Both have the same size and padding, and only one is displayed,
+   so switching themes causes no layout shift. The dark version has a light "Merger" wordmark
+   and sits directly on the dark navbar/footer (no tile), lifted by a soft shadow. */
+.logo-for-dark {
+    display: none;
+}
+
+.dark-theme .logo-for-light {
+    display: none;
+}
+
+.dark-theme .logo-for-dark {
+    display: block;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
 }
 
 @media (max-width: 575.98px) {
