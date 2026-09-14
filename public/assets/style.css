@@ -218,8 +218,15 @@ body {
     color: #1e293b !important;
 }
 
-.light-theme .about-hero .lead {
-    color: #475569 !important;
+/* About hero subtitle: dedicated class so no utility class (text-light / opacity) can grey it out */
+.light-theme .about-hero-subtitle {
+    color: #0f172a !important;
+    opacity: 1 !important;
+}
+
+.dark-theme .about-hero-subtitle {
+    color: #e5e7eb !important;
+    opacity: 1 !important;
 }
 
 .light-theme .stat-badge {
@@ -347,23 +354,47 @@ body {
     color: #d1d5db !important;
 }
 
-/* Light Theme - Security Section */
+/* Light Theme - Security Section (clean white panel, green only as an accent) */
+.light-theme .security-section {
+    border-color: rgba(15, 23, 42, 0.08);
+    box-shadow: 0 10px 40px rgba(15, 23, 42, 0.06);
+}
+
 .light-theme .security-section .security-bg {
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 50%, #6ee7b7 100%);
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.light-theme .security-section .security-bg::before {
+    background: radial-gradient(circle at 50% 0%, rgba(40, 167, 69, 0.08) 0%, transparent 60%);
 }
 
 .light-theme .security-section h2,
 .light-theme .security-section h5 {
-    color: #065f46 !important;
+    color: #0f172a !important;
 }
 
 .light-theme .security-section p {
-    color: #047857 !important;
+    color: #475569 !important;
+}
+
+.light-theme .security-section .opacity-75 {
+    opacity: 1 !important;
 }
 
 .light-theme .security-card {
-    background: rgba(255, 255, 255, 0.8);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+}
+
+.light-theme .security-card:hover {
+    background: #ffffff;
+    border-color: rgba(40, 167, 69, 0.35);
+}
+
+.light-theme .security-card-icon {
+    background: rgba(40, 167, 69, 0.1);
+    color: #1e8e4a;
 }
 
 /* Light Theme - FAQ */
@@ -487,6 +518,8 @@ body {
     background-color: #ffffff !important;
     border-color: #007bff !important;
     box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15) !important;
+    color: #1e293b !important;  /* the dark-theme :focus rule below would otherwise make typed text white */
+    caret-color: #2563eb;
 }
 
 .light-theme .form-control::placeholder {
@@ -578,6 +611,49 @@ a:hover {
 
 .navbar-brand:hover {
     color: #007bff !important;
+}
+
+/* Brand logo (navbar + footer): fixed height, auto width, so the aspect ratio is always kept */
+.brand-logo {
+    display: block;
+    width: auto;
+    max-width: none;        /* a % max-width lets flex layouts squeeze the logo */
+    object-fit: contain;    /* never stretch, even if a width is ever forced */
+    flex-shrink: 0;
+    padding: 4px 10px;
+    border-radius: 10px;
+    box-sizing: content-box;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.navbar-logo {
+    height: 44px;
+}
+
+.navbar-brand {
+    flex-shrink: 0;
+}
+
+/* Theme-specific logo files. Both have the same size and padding, and only one is displayed,
+   so switching themes causes no layout shift. The dark version has a light "Merger" wordmark
+   and sits directly on the dark navbar/footer (no tile), lifted by a soft shadow. */
+.logo-for-dark {
+    display: none;
+}
+
+.dark-theme .logo-for-light {
+    display: none;
+}
+
+.dark-theme .logo-for-dark {
+    display: block;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+}
+
+@media (max-width: 575.98px) {
+    .navbar-logo {
+        height: 36px;
+    }
 }
 
 .nav-link {
@@ -1014,15 +1090,17 @@ a:hover {
     border-radius: 24px;
     overflow: hidden;
     padding: 60px 40px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* Neutral glass panel; green stays as an accent (icons, soft top glow) instead of a full wash */
 .security-bg {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #0d4a1c 0%, #1a472a 50%, #155724 100%);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.015) 100%);
     z-index: 0;
 }
 
@@ -1033,7 +1111,7 @@ a:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2328a745' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    background: radial-gradient(circle at 50% 0%, rgba(40, 167, 69, 0.12) 0%, transparent 60%);
 }
 
 .security-content {
@@ -1062,8 +1140,8 @@ a:hover {
 }
 
 .security-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(40, 167, 69, 0.3);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
     padding: 25px;
     height: 100%;
@@ -1071,9 +1149,9 @@ a:hover {
 }
 
 .security-card:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.07);
     transform: translateY(-5px);
-    border-color: rgba(40, 167, 69, 0.5);
+    border-color: rgba(40, 167, 69, 0.35);
 }
 
 .security-card-icon {
@@ -1577,6 +1655,57 @@ a:hover {
     color: #00d4ff;
 }
 
+/* Contact form fields: explicit per-theme text, background, border, placeholder, focus and caret.
+   More specific than the generic .form-control / .bg-dark / .text-light rules, so typed text stays readable. */
+.dark-theme .contact-card .form-control {
+    background-color: #1f1f33 !important;
+    color: #f1f5f9 !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    caret-color: #60a5fa;
+}
+
+.dark-theme .contact-card .form-control::placeholder {
+    color: #8b93a7 !important;
+    opacity: 1;
+}
+
+.dark-theme .contact-card .form-control:focus {
+    background-color: #1a1a2e !important;
+    color: #ffffff !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+}
+
+.light-theme .contact-card .form-control {
+    background: #ffffff !important;
+    color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important;
+    caret-color: #2563eb;
+}
+
+.light-theme .contact-card .form-control::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+}
+
+.light-theme .contact-card .form-control:focus {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18) !important;
+}
+
+/* Keep browser autofill inside the theme colors */
+.dark-theme .contact-card .form-control:-webkit-autofill {
+    -webkit-text-fill-color: #f1f5f9;
+    box-shadow: 0 0 0 1000px #1f1f33 inset !important;
+}
+
+.light-theme .contact-card .form-control:-webkit-autofill {
+    -webkit-text-fill-color: #1e293b;
+    box-shadow: 0 0 0 1000px #ffffff inset !important;
+}
+
 /* ==========================================
    HOME PAGE ENHANCEMENTS
    ========================================== */
@@ -1701,6 +1830,10 @@ a:hover {
 
 .footer-logo:hover i {
     color: #ff6b6b;
+}
+
+.footer-logo-img {
+    height: 50px;
 }
 
 .footer-desc {

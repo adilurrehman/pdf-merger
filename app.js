@@ -60,8 +60,9 @@ app.use((req, res, next) => {
     next()
 })
 
-// On Cloudflare Workers /assets is served by Workers Static Assets before reaching Express
-app.use('/assets', express.static(path.join(__dirname, 'public/assets')))
+// Static files from public/ (CSS, images, favicons at the site root). On Cloudflare Workers
+// these are served by Workers Static Assets before reaching Express
+app.use(express.static(path.join(__dirname, 'public'), { index: false }))
 app.use(express.urlencoded({ extended: true, limit: '20kb', parameterLimit: 20 }))
 
 // Set EJS as template engine
