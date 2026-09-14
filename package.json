@@ -37,7 +37,7 @@
     "pdf-merger-js": "^5.1.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11",
+    "nodemon": "^3.1.14",
     "pdf-lib": "^1.17.1",
     "wrangler": "^4.131.0"
   }
