@@ -1,0 +1,28 @@
+# Dependabot version updates. PRs are opened for review only; nothing is merged automatically.
+version: 2
+updates:
+  # npm packages (package.json / package-lock.json)
+  - package-ecosystem: npm
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+    labels:
+      - dependencies
+
+  # GitHub Actions used in .github/workflows (SHA pins are updated with their version comments)
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - dependencies
+      - github-actions
