@@ -39,6 +39,6 @@
   "devDependencies": {
     "nodemon": "^3.1.11",
     "pdf-lib": "^1.17.1",
-    "wrangler": "^4.131.0"
+    "wrangler": "^4.131.1"
   }
 }
