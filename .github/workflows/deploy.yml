@@ -1,15 +1,15 @@
 # ==================================================
 # PDF Merger - Deployment Pipeline
 # ==================================================
+# Deploys to Cloudflare Workers from main only.
 # Runs the full CI workflow first and deploys only if it passes.
-# Each provider runs only when its secrets are configured.
 
 name: Deploy
 
 on:
   push:
-    branches: [main, master]
-  workflow_dispatch:  # Allow manual trigger (still runs CI first)
+    branches: [main]
+  workflow_dispatch:  # Allow manual trigger (still runs CI first; deploys only when run on main)
 
 permissions:
   contents: read
@@ -30,29 +30,20 @@ jobs:
     uses: ./.github/workflows/ci.yml
 
   # ==================================================
-  # DEPLOY TO PRODUCTION
+  # DEPLOY TO CLOUDFLARE WORKERS
   # ==================================================
   deploy:
-    name: Deploy to Production
+    name: Deploy to Cloudflare Workers
     runs-on: ubuntu-latest
     needs: ci
+    if: github.ref == 'refs/heads/main'
     environment: production
-
-    env:
-      # 'true' / 'false' flags so steps can check for secrets without exposing them
-      HAS_CLOUDFLARE: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
-      HAS_VERCEL: ${{ secrets.VERCEL_TOKEN != '' }}
-      HAS_RAILWAY: ${{ secrets.RAILWAY_TOKEN != '' }}
-      HAS_RENDER: ${{ secrets.RENDER_DEPLOY_HOOK != '' }}
-      HAS_VPS: ${{ secrets.VPS_HOST != '' }}
-      HAS_HEROKU: ${{ secrets.HEROKU_API_KEY != '' }}
 
     steps:
       - name: 📥 Checkout Repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           persist-credentials: false
-          fetch-depth: 0  # Heroku deploys by git push and rejects shallow clones
 
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
@@ -63,75 +54,22 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm ci
 
-      # ==========================================
-      # OPTION 1: Deploy to Cloudflare Workers
-      # ==========================================
+      - name: 🔑 Check Cloudflare Secrets
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID must be set in the production environment"
+            exit 1
+          fi
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
       - name: ☁️ Deploy to Cloudflare Workers
-        if: env.HAS_CLOUDFLARE == 'true'
         run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER_SEND_METRICS: 'false'
-
-      # ==========================================
-      # OPTION 2: Deploy to Vercel
-      # ==========================================
-      - name: 🚀 Deploy to Vercel
-        if: env.HAS_VERCEL == 'true'
-        uses: amondnet/vercel-action@16e87c0a08142b0d0d33b76aeaf20823c381b9b9 # v25.2.0
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-
-      # ==========================================
-      # OPTION 3: Deploy to Railway (official CLI, pinned version)
-      # ==========================================
-      - name: 🚂 Deploy to Railway
-        if: env.HAS_RAILWAY == 'true'
-        run: npx --yes @railway/cli@5.52.1 up --service pdf-merger --ci
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-
-      # ==========================================
-      # OPTION 4: Deploy to Render
-      # ==========================================
-      - name: 🎨 Deploy to Render
-        if: env.HAS_RENDER == 'true'
-        run: curl -fsS -o /dev/null -X POST "$RENDER_DEPLOY_HOOK"
-        env:
-          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
-
-      # ==========================================
-      # OPTION 5: Deploy to VPS via SSH
-      # ==========================================
-      - name: 🖥️ Deploy to VPS
-        if: env.HAS_VPS == 'true'
-        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
-          script: |
-            set -e
-            cd /var/www/pdf-merger
-            git pull --ff-only origin main
-            npm ci --omit=dev
-            pm2 restart pdf-merger
-
-      # ==========================================
-      # OPTION 6: Deploy to Heroku
-      # ==========================================
-      - name: 🟣 Deploy to Heroku
-        if: env.HAS_HEROKU == 'true'
-        uses: akhileshns/heroku-deploy@581dd286c962b6972d427fcf8980f60755c15520 # v3.13.15
-        with:
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ secrets.HEROKU_APP_NAME }}
-          heroku_email: ${{ secrets.HEROKU_EMAIL }}
 
   # ==================================================
   # POST-DEPLOYMENT NOTIFICATION
@@ -148,7 +86,7 @@ jobs:
         run: echo "✅ Deployment successful!"
 
       - name: 📧 Send Failure Notification
-        if: needs.deploy.result != 'success'
+        if: needs.deploy.result == 'failure' || needs.deploy.result == 'cancelled'
         run: |
           echo "❌ Deployment did not succeed: ${{ needs.deploy.result }}"
           exit 1

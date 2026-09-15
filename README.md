@@ -142,7 +142,7 @@ npm run worker:deploy  # Deploy to Cloudflare Workers
 
 ## 🚀 Deployment
 
-`deploy.yml` runs the full CI first and only deploys if it passes. It supports Cloudflare Workers, Vercel, Railway, Render, Heroku and a VPS over SSH; each provider runs only when its secrets are configured.
+Production runs on Cloudflare Workers only. `deploy.yml` runs the full CI first and, if it passes, deploys from `main` with `wrangler deploy`. It needs the `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets in the `production` environment.
 
 ## 🤝 Contributing
 
