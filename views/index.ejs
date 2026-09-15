@@ -2,7 +2,7 @@
 
     <div class="my-5 container bg-dark text-light rounded p-4 bg-height-60">
         <% if (typeof error !=='undefined' && error) { %>
-            <div class="alert alert-danger" role="alert">
+            <div class="alert alert-danger" role="alert" id="mergeError">
                 <%= error %>
             </div>
             <% } %>
@@ -62,9 +62,22 @@
         let selectedFiles = [];
         let mergeMode = 'all'; // 'all' or 'specific'
 
+        // A failed merge renders this page as the response to POST /merge. Point the history entry
+        // at "/" so a refresh is a plain GET: no form resubmission and no stale error
+        if (window.location.pathname === '/merge') {
+            window.history.replaceState(null, '', '/');
+        }
+
+        // The server's merge error only describes the last attempt; drop it as soon as the user changes anything
+        function clearMergeError() {
+            const mergeError = document.getElementById('mergeError');
+            if (mergeError) mergeError.remove();
+        }
+
         // Dropdown options handlers
         mergeAllOption.addEventListener('click', function(e) {
             e.preventDefault();
+            clearMergeError();
             mergeMode = 'all';
             mergeModeInput.value = 'all';
             mergeOptionsBtn.textContent = 'Merge All Pages';
@@ -73,6 +86,7 @@
 
         mergeSpecificOption.addEventListener('click', function(e) {
             e.preventDefault();
+            clearMergeError();
             mergeMode = 'specific';
             mergeModeInput.value = 'specific';
             mergeOptionsBtn.textContent = 'Merge Specific Pages';
@@ -121,6 +135,7 @@
 
         // Handle files from both drag-drop and file input
         function handleFiles(files) {
+            clearMergeError();
             const newFiles = Array.from(files);
             
             // Filter only PDF files
@@ -150,6 +165,7 @@
 
         // Remove file from selection
         function removeFile(index) {
+            clearMergeError();
             selectedFiles.splice(index, 1);
             updateFileInput();
             updateUI();
@@ -283,7 +299,13 @@
             handleFiles(this.files);
         });
 
+        // Editing a page range starts a new attempt too (the inputs are rebuilt, so listen on the list)
+        fileList.addEventListener('input', function (e) {
+            if (e.target.classList.contains('page-range-input')) clearMergeError();
+        });
+
         form.addEventListener('submit', function (e) {
+            clearMergeError();
             if (selectedFiles.length < MIN_FILES || selectedFiles.length > MAX_FILES) {
                 e.preventDefault();
                 alert(`Please select between ${MIN_FILES} and ${MAX_FILES} PDF files`);
